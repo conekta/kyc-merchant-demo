@@ -10,6 +10,20 @@ Stack: Vite, React 18, TypeScript, Mantine 8 e íconos Tabler (`react-icons/tb`)
 2. Crea un archivo `.env` a partir de `.env.example` y completa los valores.
 3. Corre `npm install` y `npm run dev` (StackBlitz lo hace solo).
 
+## Publicar desde tu máquina (Cloudflare quick tunnel)
+
+StackBlitz no sirve para probar el iframe real: su vista previa está aislada (COEP) y el navegador bloquea el iframe de `kyc.stg.conekta.io`. La opción más simple, gratis y sin cuenta, es correr la tienda en local y exponerla con un túnel rápido de Cloudflare:
+
+```bash
+brew install cloudflared                          # una vez; no pide cuenta
+cp .env.example .env                              # y completa los valores
+npm install
+npm run dev:tunnel                                # Vite en http://localhost:5173, aceptando *.trycloudflare.com
+cloudflared tunnel --url http://localhost:5173    # en otra terminal
+```
+
+`cloudflared` imprime una URL `https://<algo>.trycloudflare.com` para abrir o compartir. Solo funciona mientras ambos procesos estén corriendo, y la URL cambia cada vez. La llave privada se queda en tu máquina. `npm run dev` normal no acepta ese dominio.
+
 ## Variables (`.env`)
 
 | Variable | Qué es |

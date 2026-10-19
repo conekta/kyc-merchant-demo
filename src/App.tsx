@@ -1,4 +1,5 @@
-import { Alert, Anchor, Box, Group, Skeleton, Stack, Text } from '@mantine/core';
+import { Alert, Anchor, Box, em, Flex, Group, Skeleton, Stack, Text } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CollapsedBar } from './components/CollapsedBar';
@@ -23,6 +24,10 @@ export const App = () => {
   const [method, setMethod] = useState<Method>('direct_debit');
   const [collapsed, setCollapsed] = useState(false);
   const [events, setEvents] = useState<KycEvent[]>([]);
+  // Por debajo del breakpoint `sm` (768px) el resumen se apila arriba y arranca plegado.
+  const mobile = useMediaQuery(`(max-width: ${em(767.98)})`, false, { getInitialValueInEffect: false }) ?? false;
+  const [summaryOpen, setSummaryOpen] = useState(!mobile);
+  useEffect(() => setSummaryOpen(!mobile), [mobile]);
   const creating = useRef(false); // evita crear dos customers con StrictMode
 
   const createFlow = useCallback(async () => {
@@ -71,7 +76,7 @@ export const App = () => {
 
   // "Nuevo flujo" y el panel de eventos son controles del presentador: van fuera del checkout del merchant.
   return (
-    <Box bg='neutral.0' mih='100vh' px='lg' style={{ paddingBlock: 32 }}>
+    <Box bg='neutral.0' mih='100vh' px={{ base: 'sm', sm: 'lg' }} py={{ base: 'lg', sm: '3xl' }}>
       <Stack gap='sm' maw={1000} mx='auto'>
         <Group justify='flex-end'>
           <Anchor size='xs' component='button' type='button' onClick={newFlow}>
@@ -82,9 +87,9 @@ export const App = () => {
           bg='#fff'
           style={{ border: '1px solid var(--mantine-color-neutral-3)', borderRadius: 12, overflow: 'hidden' }}
         >
-          <Group wrap='nowrap' align='stretch' gap={0} mih={640}>
-            <OrderSummary />
-            <Stack gap='md' p='xl' style={{ flex: 1, minWidth: 0 }}>
+          <Flex direction={mobile ? 'column' : 'row'} align='stretch' mih={mobile ? undefined : 640}>
+            <OrderSummary opened={summaryOpen} onToggle={() => setSummaryOpen((o) => !o)} mobile={mobile} />
+            <Stack gap='md' p={{ base: 'md', sm: 'xl' }} style={{ flex: 1, minWidth: 0 }}>
               {collapsed && showKyc ? (
                 <CollapsedBar onChange={() => setCollapsed(false)} />
               ) : (
@@ -109,7 +114,7 @@ export const App = () => {
               {!flowId && !error && showKyc && <Skeleton h={480} radius='md' />}
               {flowId && <KycFrame flowId={flowId} hidden={!showKyc} callbacks={callbacks} />}
             </Stack>
-          </Group>
+          </Flex>
         </Box>
         {debug && <EventsPanel events={events} />}
       </Stack>

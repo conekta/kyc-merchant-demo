@@ -1,0 +1,27 @@
+name: Ensure ECR repository
+description: >
+  Create the ECR repository if it does not exist yet, applying the repository
+  policy only on first creation. Idempotent and race-tolerant: safe to run from
+  multiple parallel jobs against the same repository.
+
+inputs:
+  repo:
+    description: ECR repository name.
+    required: true
+  policy-file:
+    description: Path to the repository policy JSON (relative to the workspace).
+    required: false
+    default: .github/workflows/policy.json
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure ECR repository exists
+      shell: bash
+      run: |
+        if ! aws ecr describe-repositories --repository-names "${{ inputs.repo }}" >/dev/null 2>&1; then
+          aws ecr create-repository --repository-name "${{ inputs.repo }}" >/dev/null 2>&1 || true
+          aws ecr set-repository-policy \
+            --repository-name "${{ inputs.repo }}" \
+            --policy-text "file://${{ inputs.policy-file }}" >/dev/null
+        fi

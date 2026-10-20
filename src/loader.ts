@@ -14,11 +14,13 @@ interface KycInitParams {
 declare global {
   interface Window {
     ConektaKYC?: { init: (params: KycInitParams) => { destroy: () => void } };
+    // Lo define /config.js (server/handlers.ts) desde las variables del servidor.
+    __KYC_DEMO__?: { publicKey?: string; kycBaseUrl?: string };
   }
 }
 
-export const KYC_BASE_URL = (import.meta.env.VITE_KYC_BASE_URL || 'https://kyc.stg.conekta.io').replace(/\/$/, '');
-export const PUBLIC_KEY = import.meta.env.VITE_CONEKTA_PUBLIC_KEY || '';
+export const KYC_BASE_URL = (window.__KYC_DEMO__?.kycBaseUrl || 'https://kyc.stg.conekta.io').replace(/\/$/, '');
+export const PUBLIC_KEY = window.__KYC_DEMO__?.publicKey || '';
 const SCRIPT_URL = `${KYC_BASE_URL}/v1.0/js/conekta-kyc.min.js`;
 
 let scriptPromise: Promise<void> | null = null;

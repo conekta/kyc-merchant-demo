@@ -1,6 +1,7 @@
 // Lógica pura de creación del flujo KYC (sin Vite ni red propia: el fetch se inyecta, así se puede probar).
 
-export const CONEKTA_API_URL = 'https://api.stg.conekta.io/customers';
+// Se cambia con CONEKTA_API_URL; el flujo debe vivir en el mismo ambiente que KYC_BASE_URL.
+export const DEFAULT_CONEKTA_API_URL = 'https://api.stg.conekta.io';
 
 export class FlowError extends Error {
   status: number;
@@ -30,12 +31,12 @@ export const buildCustomerBody = () => ({
   ],
 });
 
-export const buildCreateCustomerRequest = (privateKey: string | undefined) => {
+export const buildCreateCustomerRequest = (privateKey: string | undefined, apiUrl?: string) => {
   if (!privateKey || !privateKey.trim()) {
-    throw new FlowError('Falta CONEKTA_PRIVATE_KEY en el archivo .env (ver .env.example).', 500);
+    throw new FlowError('Falta CONEKTA_PRIVATE_KEY (en .env o en las variables del pod; ver .env.example).', 500);
   }
   return {
-    url: CONEKTA_API_URL,
+    url: `${(apiUrl || DEFAULT_CONEKTA_API_URL).replace(/\/$/, '')}/customers`,
     init: {
       method: 'POST',
       headers: {
@@ -86,8 +87,12 @@ export type FetchLike = (
   init: ReturnType<typeof buildCreateCustomerRequest>['init'],
 ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
 
-export const createFlow = async (privateKey: string | undefined, fetchImpl: FetchLike): Promise<{ flowId: string }> => {
-  const { url, init } = buildCreateCustomerRequest(privateKey);
+export const createFlow = async (
+  privateKey: string | undefined,
+  fetchImpl: FetchLike,
+  apiUrl?: string,
+): Promise<{ flowId: string }> => {
+  const { url, init } = buildCreateCustomerRequest(privateKey, apiUrl);
   let response;
   try {
     response = await fetchImpl(url, init);

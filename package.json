@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:tunnel": "vite --mode tunnel",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "build": "tsc --noEmit && vite build && vite build --ssr server/main.ts --outDir dist-server",
+    "start": "node dist-server/main.js",
     "test": "vitest run"
   },
   "dependencies": {

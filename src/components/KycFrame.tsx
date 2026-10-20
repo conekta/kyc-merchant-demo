@@ -46,7 +46,7 @@ export const KycFrame = ({ flowId, hidden, callbacks }: Props) => {
     <>
       {error && (
         <Alert color='red' title='No se pudo cargar el flujo de verificación'>
-          {error}. Revisa VITE_KYC_BASE_URL ({KYC_BASE_URL}) y VITE_CONEKTA_PUBLIC_KEY.
+          {error}. Revisa KYC_BASE_URL ({KYC_BASE_URL}) y CONEKTA_PUBLIC_KEY.
         </Alert>
       )}
       <div

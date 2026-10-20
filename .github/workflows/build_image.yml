@@ -1,0 +1,66 @@
+name: Push the Docker image to AWS ECR Repo
+# Igual que build_image.yml / docker-image.yml de conekta-elements: la imagen va a ECR con el nombre del repo y los tags
+# <sha corto> y <rama o tag del release>. Codeportal despliega uno de esos tags en UAT.
+# Un solo job para amd64 y arm64: las etapas de la plataforma destino solo copian archivos (Dockerfile), así que buildx
+# no emula nada.
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+  workflow_dispatch:
+jobs:
+  Build:
+    runs-on: aws-runner-set
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Los runners self-hosted (aws-runner-set) no traen el AWS CLI.
+      - name: Install AWS CLI
+        run: |
+          curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+          rm -rf awscliv2.zip aws
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Ensure ECR repository exists
+        uses: ./.github/actions/ensure-ecr-repo
+        with:
+          repo: ${{ github.event.repository.name }}
+
+      - name: Image tags
+        id: tags
+        run: |
+          IMAGE="${{ steps.login-ecr.outputs.registry }}/${{ github.event.repository.name }}"
+          REF="${GITHUB_REF#refs/heads/}"
+          REF="${REF#refs/tags/}"
+          echo "tags=$IMAGE:${GITHUB_SHA::7},$IMAGE:${REF//\//-}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=kyc-merchant-demo
+          cache-to: type=gha,mode=max,scope=kyc-merchant-demo

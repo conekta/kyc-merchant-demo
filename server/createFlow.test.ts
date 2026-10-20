@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildCreateCustomerRequest, createFlow, extractFlowId, FlowError } from './createFlow';
-import { createFlowHandler } from './createFlowPlugin';
+import { configScript, createFlowHandler } from './handlers';
 
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body });
 const withKyc = (kyc: unknown) => ({ payment_sources: { data: [{ kyc }] } });
@@ -15,7 +15,7 @@ const call = async (method: string, fetchImpl = vi.fn(), privateKey = 'key_secre
     setHeader: (name: string, value: string) => (headers[name] = value),
     end: (chunk: string) => (res.body = chunk),
   });
-  await createFlowHandler(privateKey, fetchImpl)({ method } as IncomingMessage, fakeRes as unknown as ServerResponse);
+  await createFlowHandler({ CONEKTA_PRIVATE_KEY: privateKey }, fetchImpl)({ method } as IncomingMessage, fakeRes as unknown as ServerResponse);
   return { status: res.statusCode, headers, json: JSON.parse(res.body) };
 };
 
@@ -27,6 +27,11 @@ describe('createFlow', () => {
     expect(init.headers.Authorization).toBe('Bearer key_secret');
     expect(init.headers.Accept).toBe('application/vnd.conekta-v2.2.0+json');
     expect(JSON.parse(init.body).payment_sources[0].service_description).toBe('Seguro de auto · Plan Amplio');
+  });
+
+  it('usa CONEKTA_API_URL si viene, con o sin / final', () => {
+    expect(buildCreateCustomerRequest('k', 'https://api.uat.conekta.com/').url).toBe('https://api.uat.conekta.com/customers');
+    expect(buildCreateCustomerRequest('k', '').url).toBe('https://api.stg.conekta.io/customers');
   });
 
   it('falla sin llave privada', () => {
@@ -86,5 +91,12 @@ describe('POST /api/create-flow', () => {
     const { status, json } = await call('POST', vi.fn(), '');
     expect(status).toBe(500);
     expect(json.error).toMatch(/CONEKTA_PRIVATE_KEY/);
+  });
+});
+
+describe('GET /config.js', () => {
+  it('expone solo la configuración pública', () => {
+    const script = configScript({ CONEKTA_PUBLIC_KEY: 'key_pub', KYC_BASE_URL: 'https://kyc.x', CONEKTA_PRIVATE_KEY: 'key_secret' });
+    expect(script).toBe('window.__KYC_DEMO__ = {"publicKey":"key_pub","kycBaseUrl":"https://kyc.x"};');
   });
 });

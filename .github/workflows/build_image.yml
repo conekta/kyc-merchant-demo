@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 jobs:
   Build:
-    runs-on: aws-runner-set
+    runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -25,14 +25,6 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      # Los runners self-hosted (aws-runner-set) no traen el AWS CLI.
-      - name: Install AWS CLI
-        run: |
-          curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip -q awscliv2.zip
-          sudo ./aws/install
-          rm -rf awscliv2.zip aws
 
       - name: Checkout code
         uses: actions/checkout@v7
